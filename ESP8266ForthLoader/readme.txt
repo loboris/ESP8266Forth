@@ -34,3 +34,4 @@ Operation
 
 NOTES:
 1. ESP8266ForthLoader’s window can be resized as necessary
+2. The Java source code for the loader is in the jar file.
