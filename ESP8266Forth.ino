@@ -1,67 +1,74 @@
 /*
- * Yaffa Forth for the 32 bit ESP8266
- * Currently implemented on a NodeMCU Amica module from electrodragon.com
- *
- * ESP8266Forth incorporates Yaffa by Stuart Wood which has been ported
- * to 32 bits.
- *
- * This code allows interaction with the Forth interpreter via the USB Serial
- * interface or a network connection and allows code to be compiled and run
- * from files on an attached SD memory card. See IODirector.h for details.
- *
- * Connections between the NodeMCU Amica, SD card and LCD are as follows:
- * NodeMCU Card          SD Card        Optional AF 1.8" LCD
- * =========================================================
- *     3.3                 VCC                  VCC
- *     Gnd                 GND                  Gnd
- *     D1 (GPIO5)          CS
- *     D7 (MOSI)           SI                   MOSI
- *     D6 (MISO)           SO
- *     D5 (CLK)            SLK                  SCK
- *     D2 (GPIO4)                              TFT_CS
- *     D8 (GPIO15)                              LITE
- *     D4 (GPIO2)                               D/C
- *
- * A connection must also be made between the RST and D0
- * pins on the Amica to allow hardware reset via "restart" to work.
- *
- * HAS_LCD must be defined to use the LCD and the modified Adafruit
- * library from https://github.com/nzmichaelh/Adafruit-ST7735-Library
- * must be installed.
- *
- * Concept and Porting by: Craig A. Lindley
- * Version: 0.54
- * Last Update: 01/25/2015
- *
- * Copyright (c) 2015, 2016 Craig A. Lindley
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
- * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+   Yaffa Forth for the 32 bit ESP8266
 
-// #define HAS_LCD // Comment this out to remove LCD functionality
+   Currently implemented on a NodeMCU Amica module from electrodragon.com
 
+   ESP8266Forth incorporates Yaffa by Stuart Wood which has been ported
+   to 32 bits.
 
-#define IS_ROBOT // Comment this out to remove robot functionality
+   This code allows interaction with the Forth interpreter via the USB Serial
+   interface or a network connection and allows code to be compiled and run
+   from files on an attached SD memory card. See IODirector.h for details.
+
+   Connections between the NodeMCU Amica and optional hardware as follows:
+   NodeMCU Amica  Optional SD Card  Optional AF 1.8" LCD  Optional L293D Motor Controller
+   ======================================================================================
+       3.3               VCC                VCC
+       Gnd               GND                Gnd
+       D1 (GPIO5)        CS
+       D7 (MOSI)         SI                 MOSI
+       D6 (MISO)         SO
+       D5 (CLK)          SLK                SCK
+       D2 (GPIO4)                          TFT_CS                    1A
+       D8 (GPIO15)                          LITE                     3A
+       D4 (GPIO2)                            D/C                     4A
+       D3 (GPIO0)                                                    2A
+
+   A connection must also be made between the RST and D0
+   pins on the Amica to allow hardware reset via the "restart" word to work.
+
+   HAS_SD_CARD must be defined to use a connected SD card
+   HAS_LCD must be defined to use the Adafruit 1.8" LCD and the modified Adafruit
+   library from https://github.com/nzmichaelh/Adafruit-ST7735-Library
+   must be installed.
+   HAS_MOTOR_CONTROLLER must be defined to use a connected L293D motor controller chip
+
+   Concept and Porting by: Craig A. Lindley
+   Version: 0.6
+   Last Update: 04/30/2016
+
+   Copyright (c) 2015, 2016 Craig A. Lindley
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy of
+   this software and associated documentation files (the "Software"), to deal in
+   the Software without restriction, including without limitation the rights to
+   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+   the Software, and to permit persons to whom the Software is furnished to do so,
+   subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+   FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+   COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+// No optional hardware defined by default
+// #define HAS_SD_CARD          // Uncomment this to use attached SD memory card
+// #define HAS_LCD              // Uncomment this to use LCD functionality
+// #define HAS_MOTOR_CONTROLLER // Uncomment to add motor controller functionality
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+
+#ifdef HAS_SD_CARD
 #include <SD.h>
 #include <SPI.h>
+#endif
 
 #ifdef HAS_LCD
 #include "Adafruit_GFX.h"
@@ -81,7 +88,10 @@ const char *WIFI_SSID = "CraigNet";
 const char *WIFI_PASS = "craigandheather";
 
 // Hardware Configuration
+#ifdef HAS_SD_CARD
 const int GPIO_SD_CS =  5; // SD card chip select line
+#endif
+
 const int GPIO_RESET = 16; // Hardware reset line. See note above.
 
 #ifdef HAS_LCD
@@ -91,7 +101,7 @@ const int GPIO_TFT_DC   =  2;
 const int GPIO_TFT_LITE = 15;
 #endif
 
-#ifdef IS_ROBOT
+#ifdef HAS_MOTOR_CONTROLLER
 // Connections between NodeMCU module and an L293D motor controller chip
 const int GPIO_1A   =  4;
 const int GPIO_2A   =  0;
@@ -117,7 +127,7 @@ IODirector ioDirector;
 
 void setup(void) {
 
-#ifdef IS_ROBOT
+#ifdef HAS_MOTOR_CONTROLLER
   // Set all four motor chip control lines to outputs
   pinMode(GPIO_1A, OUTPUT);
   pinMode(GPIO_2A, OUTPUT);
@@ -176,6 +186,7 @@ void setup(void) {
   print_P(PSTR("Incorporates Yaffa by Stuart Wood\n"));
   print_P(PSTR("Copyright (C) 2015, 2016 Craig A. Lindley\n"));
 
+#ifdef HAS_SD_CARD
   // See if SD card is present and working
   if (! SD.begin(GPIO_SD_CS)) {
     print_P(PSTR("\nSD memory card failed or is missing\n"));
@@ -191,6 +202,7 @@ void setup(void) {
   if (SD.exists((char *) "autorun.frt")) {
     ioDirector.injectAutoRunFile();
   }
+#endif
 
   // Initialize Yaffa
   yaffaInit();

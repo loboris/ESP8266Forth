@@ -1710,8 +1710,11 @@ static void _throw(void) {
   tos = -1;                       // Clear the stack.
   _quit();
   state = FALSE;
+
+#ifdef HAS_SD_CARD
   // Clean up any IODirector file activity
   ioDirector.fileHousekeeping();
+#endif
 }
 #endif
 
@@ -2005,6 +2008,7 @@ static void _randomMinMax(void) {
   push(random(pop(), pop()));
 }
 
+#ifdef HAS_SD_CARD
 const PROGMEM char load_str[] = "load";
 // Load a named file of Forth from SD card
 static void _load(void) {
@@ -2021,6 +2025,7 @@ static void _load(void) {
     ioDirector.selectChannel(FILE_IO);
   }
 }
+#endif
 
 const PROGMEM char freeFSP_str[] = "freeForthSpacePercent";
 static void _freeFSP(void) {
@@ -2182,6 +2187,7 @@ static void _endcase(void) {
   }
 }
 
+#ifdef HAS_SD_CARD
 // SD card functions
 
 // List files on SD card
@@ -2247,6 +2253,7 @@ static void _showfile(void) {
   }
   ioDirector.printString("\n\n");
 }
+#endif
 
 #ifdef HAS_LCD
 
@@ -2584,7 +2591,9 @@ const PROGMEM flashEntry_t flashDict[] = {
   { freeFSP_str,        _freeFSP,         NORMAL },    // CAL
   { randomMax_str,      _randomMax,       NORMAL },    // CAL
   { randomMinMax_str,   _randomMinMax,    NORMAL },    // CAL  160
+#ifdef HAS_SD_CARD
   { load_str,           _load,            NORMAL },    // CAL
+#endif
   { restart_str,        _restart,         NORMAL },    // CAL
   { serialIO_str,       _serialIO,        NORMAL },    // CAL
   { netIO_str,          _netIO,           NORMAL },    // CAL
@@ -2596,8 +2605,11 @@ const PROGMEM flashEntry_t flashDict[] = {
   { of_str,             _of,              IMMEDIATE + COMP_ONLY },    // CAL  170
   { endof_str,          _endof,           IMMEDIATE + COMP_ONLY },    // CAL
   { endcase_str,        _endcase,         IMMEDIATE + COMP_ONLY },    // CAL  172
+
+#ifdef HAS_SD_CARD
   { files_str,          _files,           NORMAL },    // CAL   173
   { showfile_str,       _showfile,        NORMAL },    // CAL   174
+#endif
 
 #ifdef HAS_LCD
   { lcd_str,            _lcd,             NORMAL },    // CAL   175

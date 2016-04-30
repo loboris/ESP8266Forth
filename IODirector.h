@@ -11,8 +11,8 @@
  * is used to load a file of Forth code from an SD card.
  *
  * Concept, design and implementation by: Craig A. Lindley
- * Version: 0.5
- * Last Update: 01/08/2015
+ * Version: 0.6
+ * Last Update: 04/30/2016
  */
 
 #ifndef IODIRECTOR
@@ -76,6 +76,7 @@ class IODirector {
           break;
 
         case FILE_IO:
+#ifdef HAS_SD_CARD
           // Process in coming data
           charsAvailable = forthFile.available();
           if (charsAvailable != 0) {
@@ -96,7 +97,7 @@ class IODirector {
           for (int i = 0; i < charCount; i++) {
             get(&outQueue);
           }
-
+#endif
           break;
 
         case NET_IO:
@@ -121,6 +122,8 @@ class IODirector {
           break;
       }
     }
+
+#ifdef HAS_SD_CARD
 
     // Set the Forth file to be loaded. Name must be in 8.3 format
     bool setFile(const char *filename) {
@@ -174,6 +177,7 @@ class IODirector {
         put(&inQueue, buffer[i]);
       }
     }
+#endif
 
     // Select the channel to do I/O with
     void selectChannel(enum CHANNELS channel) {
@@ -279,7 +283,10 @@ class IODirector {
 
   private:
     bool fileOpen;
+
+#ifdef HAS_SD_CARD
     File forthFile;
+#endif
 
     enum CHANNELS currentChannel;
     enum CHANNELS interruptedChannel;
